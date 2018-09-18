@@ -10,11 +10,10 @@ MAINTAINER QuantConnect <contact@quantconnect.com>
 #################################
 # Option 1: Download from Master
 RUN \
-mkdir -m 777 -p /root/Lean/ && \
+git clone https://github.com/QuantConnect/Lean.git && \
 cd /root/Lean
-RUN \
-wget https://github.com/QuantConnect/Lean/archive/master.zip && \
-unzip master.zip /root/Lean
+#wget https://github.com/QuantConnect/Lean/archive/master.zip && \
+#unzip master.zip /root/Lean
 RUN \
 sed -i 's/4.5/4.0/' Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
 wget https://nuget.org/nuget.exe && \
