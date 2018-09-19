@@ -11,8 +11,8 @@ MAINTAINER QuantConnect <contact@quantconnect.com>
 # Option 1: Download from Master
 RUN \
 mkdir -p /root/Lean && \
-git clone https://github.com/QuantConnect/Lean.git && \
-cd /root/Lean
+cd /root/Lean && \
+git clone https://github.com/QuantConnect/Lean.git
 #wget https://github.com/QuantConnect/Lean/archive/master.zip && \
 #unzip master.zip /root/Lean
 RUN \
