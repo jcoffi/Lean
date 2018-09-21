@@ -11,11 +11,17 @@ MAINTAINER QuantConnect <contact@quantconnect.com>
 # Option 1: Download from Master
 <<<<<<< HEAD
 RUN \
+<<<<<<< HEAD
 mkdir -p /root/Lean && \
 cd /root/Lean && \
 git clone https://github.com/QuantConnect/Lean.git
 #wget https://github.com/QuantConnect/Lean/archive/master.zip && \
 #unzip master.zip /root/Lean
+=======
+wget https://github.com/QuantConnect/Lean/archive/master.zip && \
+unzip master.zip /root/Lean && \
+cd /root/Lean
+>>>>>>> parent of f4b505fb... added /root/Lean
 RUN \
 sed -i 's/4.5/4.0/' Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
 wget https://nuget.org/nuget.exe && \
