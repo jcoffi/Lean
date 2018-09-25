@@ -16,9 +16,9 @@ cd /root/Lean/Lean-master
 RUN \
 sed -i 's/4.5/4.0/' /root/Lean/Lean-master/Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
 wget https://nuget.org/nuget.exe && \
-mono nuget.exe restore QuantConnect.Lean.sln -NonInteractive && \
+mono nuget.exe restore /root/Lean/Lean-master/QuantConnect.Lean.sln -NonInteractive && \
 xbuild /property:Configuration=Release && \
-cd /root/Lean/Launcher/bin/Release/
+cd /root/Lean/Lean-master/Launcher/bin/Release/
 #################################
 
 
