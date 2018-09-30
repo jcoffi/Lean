@@ -3,7 +3,7 @@
 #	Cross platform deployment for multiple brokerages
 #
 
-FROM quantconnect/lean:foundation
+FROM jcoffi/lean:foundation
 
 MAINTAINER QuantConnect <contact@quantconnect.com>
 
