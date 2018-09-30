@@ -26,7 +26,7 @@ RUN wget https://cdn.quantconnect.com/miniconda/Miniconda3-4.3.31-Linux-x86_64.s
     ln -s /opt/miniconda3/lib/libpython3.6m.so /usr/lib/libpython3.6m.so && \
     conda update -y python conda pip && \
     conda install -y cython pandas && \
-    conda install -y rauth && \
+    conda install -c conda-forge rauth && \
     conda install -y jsonschema lxml plotly quandl && \
     conda install -y blaze cvxopt keras nltk tensorflow theano && \
     conda install -y pytorch torchvision -c pytorch && \
