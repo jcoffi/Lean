@@ -16,7 +16,7 @@ ln -s /root/Lean-master /root/Lean && \
 cd /root/Lean
 RUN \
 sed -i 's/4.5/4.0/' /root/Lean/Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
-wget https://nuget.org/nuget.exe && \
+wget https://dist.nuget.org/win-x86-commandline/latest/nuget.exe && \
 mono nuget.exe restore /root/Lean/QuantConnect.Lean.sln -NonInteractive && \
 xbuild /property:Configuration=Release && \
 cd /root/Lean/Launcher/bin/Release/
