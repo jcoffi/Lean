@@ -12,13 +12,13 @@ MAINTAINER QuantConnect <contact@quantconnect.com>
 RUN \
 wget https://github.com/QuantConnect/Lean/archive/master.zip && \
 unzip master.zip -d /root/Lean && \
-cd /root/Lean/Lean-master
+cd /root/Lean
 RUN \
-sed -i 's/4.5/4.0/' /root/Lean/Lean-master/Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
+sed -i 's/4.5/4.0/' /root/Lean/Algorithm.VisualBasic/QuantConnect.Algorithm.VisualBasic.vbproj && \
 wget https://nuget.org/nuget.exe && \
-mono nuget.exe restore /root/Lean/Lean-master/QuantConnect.Lean.sln -NonInteractive && \
+mono nuget.exe restore /root/Lean/QuantConnect.Lean.sln -NonInteractive && \
 xbuild /property:Configuration=Release && \
-cd /root/Lean/Lean-master/Launcher/bin/Release/
+cd /root/Lean/Launcher/bin/Release/
 #################################
 
 
@@ -28,7 +28,7 @@ cd /root/Lean/Lean-master/Launcher/bin/Release/
 #################################
 
 # Finally.
-WORKDIR /root/Lean/Lean-master/Launcher/bin/Release
+WORKDIR /root/Lean/Launcher/bin/Release
 CMD [ "mono", "QuantConnect.Lean.Launcher.exe"] # Run app
 
 # Usage:
