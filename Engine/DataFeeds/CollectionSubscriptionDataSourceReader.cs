@@ -28,7 +28,6 @@ namespace QuantConnect.Lean.Engine.DataFeeds
     /// </summary>
     public class CollectionSubscriptionDataSourceReader : ISubscriptionDataSourceReader
     {
-
         private readonly DateTime _date;
         private readonly bool _isLiveMode;
         private readonly BaseData _factory;
@@ -97,9 +96,17 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                     yield break;
                 }
 
+                var attempt = 0;
                 var raw = "";
                 while (!reader.EndOfStream)
                 {
+                    // Quit after 5 failed attempts to read valid data
+                    if (attempt > 5)
+                    {
+                        attempt = 0;
+                        yield break;
+                    }
+
                     BaseDataCollection instances;
                     try
                     {
@@ -109,12 +116,14 @@ namespace QuantConnect.Lean.Engine.DataFeeds
                         if (instances == null)
                         {
                             OnInvalidSource(source, new Exception("Reader must generate a BaseDataCollection with the FileFormat.Collection"));
+                            attempt++;
                             continue;
                         }
                     }
                     catch (Exception err)
                     {
                         OnReaderError(raw, err);
+                        attempt++;
                         continue;
                     }
 
@@ -136,8 +145,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
             }
             finally
             {
-                if (reader != null)
-                    reader.Dispose();
+                reader?.Dispose();
             }
         }
 
@@ -148,8 +156,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         /// <param name="exception">The exception that was caught</param>
         private void OnReaderError(string line, Exception exception)
         {
-            var handler = ReaderError;
-            if (handler != null) handler(this, new ReaderErrorEventArgs(line, exception));
+            ReaderError?.Invoke(this, new ReaderErrorEventArgs(line, exception));
         }
 
         /// <summary>
@@ -159,8 +166,7 @@ namespace QuantConnect.Lean.Engine.DataFeeds
         /// <param name="exception">The exception if one was raised, otherwise null</param>
         private void OnInvalidSource(SubscriptionDataSource source, Exception exception)
         {
-            var handler = InvalidSource;
-            if (handler != null) handler(this, new InvalidSourceEventArgs(source, exception));
+            InvalidSource?.Invoke(this, new InvalidSourceEventArgs(source, exception));
         }
     }
 }

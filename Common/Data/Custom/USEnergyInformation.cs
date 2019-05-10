@@ -96,53 +96,42 @@ namespace QuantConnect.Data.Custom
             // Do not emit if the content did not change
             if (string.IsNullOrWhiteSpace(format) || _previousContent == content)
             {
-                return GetEmptyCollection(config.Symbol);
+                return null;
             }
             _previousContent = content;
 
-            try
-            {
-                // Fix invalid json before we parse it
-                var index = content.IndexOf("\"series\":");
-                content = "{" + content.Substring(index);
-                var series = JObject.Parse(content)["series"][0];
+            // Fix invalid json before we parse it
+            var index = content.IndexOf("\"series\":", StringComparison.Ordinal);
+            content = "{" + content.Substring(index);
+            var series = JObject.Parse(content)["series"][0];
 
-                // Do not emit if the end of the series did not change
-                date = (DateTime)series["updated"];
-                if (_previousDate == date)
+            // Do not emit if the end of the series did not change
+            date = (DateTime) series["updated"];
+            if (_previousDate == date)
+            {
+                return null;
+            }
+
+            _previousDate = date;
+
+            var last = series.Value<string>("lastHistoricalPeriod") ?? series["end"];
+            var offset = date - DateTimeConverter(last, format);
+
+            var objectList = (
+                from jToken in series["data"]
+                where jToken[1].Type != JTokenType.Null
+                let closeTime = DateTimeConverter(jToken[0], format).ConvertFromUtc(config.DataTimeZone)
+                select new USEnergyInformation
                 {
-                    return GetEmptyCollection(config.Symbol);
+                    Symbol = config.Symbol,
+                    Time = closeTime - _period,
+                    EnergyDataPointCloseTime = closeTime,
+                    EndTime = closeTime + offset,
+                    Value = (decimal) jToken[1]
                 }
-                _previousDate = date;
+            ).OrderBy(x => x.EndTime);
 
-                var last = series.Value<string>("lastHistoricalPeriod") ?? series["end"];
-                var offset = date - DateTimeConverter(last, format);
-
-                var objectList = (
-                    from jToken in series["data"]
-                    where jToken[1].Type != JTokenType.Null
-                    let closeTime = DateTimeConverter(jToken[0], format).ConvertFromUtc(config.DataTimeZone)
-                    select new USEnergyInformation
-                    {
-                        Symbol = config.Symbol,
-                        Time = closeTime - _period,
-                        EnergyDataPointCloseTime = closeTime,
-                        EndTime = closeTime + offset,
-                        Value = (decimal)jToken[1]
-                    }
-                    ).OrderBy(x => x.EndTime);
-
-                return new BaseDataCollection(date, config.Symbol, objectList);
-            }
-            catch
-            {
-                return GetEmptyCollection(config.Symbol);
-            }
-        }
-
-        private BaseDataCollection GetEmptyCollection(Symbol symbol)
-        {
-            return new BaseDataCollection(_previousDate, symbol);
+            return new BaseDataCollection(date, config.Symbol, objectList);
         }
 
         /// <summary>
