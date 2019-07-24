@@ -28,6 +28,7 @@ using QuantConnect.Interfaces;
 using QuantConnect.Lean.Engine.Alpha;
 using QuantConnect.Logging;
 using QuantConnect.Packets;
+using QuantConnect.Statistics;
 using QuantConnect.Util;
 
 namespace QuantConnect.Lean.Engine.Alphas
@@ -37,11 +38,13 @@ namespace QuantConnect.Lean.Engine.Alphas
     /// </summary>
     public class DefaultAlphaHandler : IAlphaHandler
     {
-        private DateTime _lastSecurityValuesSnapshotTime;
-
+        private DateTime _lastStepTime;
+        private List<Insight> _insights;
         private ChartingInsightManagerExtension _charting;
         private ISecurityValuesProvider _securityValuesProvider;
         private CancellationTokenSource _cancellationTokenSource;
+        private FitnessScoreManager _fitnessScore;
+        private DateTime _lastFitnessScoreCalculation;
         private readonly object _lock = new object();
 
         /// <summary>
@@ -98,6 +101,8 @@ namespace QuantConnect.Lean.Engine.Alphas
             Algorithm = algorithm;
             MessagingHandler = messagingHandler;
 
+            _fitnessScore = new FitnessScoreManager();
+            _insights = new List<Insight>();
             _securityValuesProvider = new AlgorithmSecurityValuesProvider(algorithm);
 
             InsightManager = CreateInsightManager();
@@ -112,7 +117,13 @@ namespace QuantConnect.Lean.Engine.Alphas
             InsightManager.AddExtension(_charting);
 
             // when insight is generated, take snapshot of securities and place in queue for insight manager to process on alpha thread
-            algorithm.InsightsGenerated += (algo, collection) => InsightManager.Step(collection.DateTimeUtc, CreateSecurityValuesSnapshot(), collection);
+            algorithm.InsightsGenerated += (algo, collection) =>
+            {
+                lock (_insights)
+                {
+                    _insights.AddRange(collection.Insights);
+                }
+            };
         }
 
         /// <summary>
@@ -122,6 +133,7 @@ namespace QuantConnect.Lean.Engine.Alphas
         /// <param name="algorithm">The algorithm instance</param>
         public void OnAfterAlgorithmInitialized(IAlgorithm algorithm)
         {
+            _fitnessScore.Initialize(algorithm);
             // send date ranges to extensions for initialization -- this data wasn't available when the handler was
             // initialzied, so we need to invoke it here
             InsightManager.InitializeExtensionsForRange(algorithm.StartDate, algorithm.EndDate, algorithm.UtcTime);
@@ -133,9 +145,25 @@ namespace QuantConnect.Lean.Engine.Alphas
         public virtual void ProcessSynchronousEvents()
         {
             // check the last snap shot time, we may have already produced a snapshot via OnInsightssGenerated
-            if (_lastSecurityValuesSnapshotTime != Algorithm.UtcTime)
+            if (_lastStepTime != Algorithm.UtcTime)
             {
-                InsightManager.Step(Algorithm.UtcTime, CreateSecurityValuesSnapshot(), new GeneratedInsightsCollection(Algorithm.UtcTime, Enumerable.Empty<Insight>()));
+                _lastStepTime = Algorithm.UtcTime;
+                lock (_insights)
+                {
+                    InsightManager.Step(_lastStepTime, _securityValuesProvider.GetAllValues(), new GeneratedInsightsCollection(_lastStepTime, _insights, clone: false));
+                    _insights.Clear();
+                }
+            }
+
+            if (_lastFitnessScoreCalculation.Date != Algorithm.UtcTime.Date)
+            {
+                _lastFitnessScoreCalculation = Algorithm.UtcTime.Date;
+                _fitnessScore.UpdateScores();
+
+                RuntimeStatistics.FitnessScore = _fitnessScore.FitnessScore;
+                RuntimeStatistics.PortfolioTurnover = _fitnessScore.PortfolioTurnover;
+                RuntimeStatistics.SortinoRatio = _fitnessScore.SortinoRatio;
+                RuntimeStatistics.ReturnOverMaxDrawdown = _fitnessScore.ReturnOverMaxDrawdown;
             }
         }
 
@@ -240,12 +268,6 @@ namespace QuantConnect.Lean.Engine.Alphas
         protected virtual AlphaResultPacketSender CreateAlphaResultPacketSender()
         {
             return new AlphaResultPacketSender(Job, MessagingHandler, TimeSpan.FromSeconds(1), 50);
-        }
-
-        private ReadOnlySecurityValuesCollection CreateSecurityValuesSnapshot()
-        {
-            _lastSecurityValuesSnapshotTime = Algorithm.UtcTime;
-            return _securityValuesProvider.GetAllValues();
         }
 
         /// <summary>

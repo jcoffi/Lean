@@ -14,6 +14,7 @@
 */
 
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
@@ -39,6 +40,8 @@ namespace QuantConnect
     {
         #region Empty, DefaultDate Fields
 
+        private static readonly ConcurrentDictionary<string, SecurityIdentifier> SecurityIdentifierCache
+            = new ConcurrentDictionary<string, SecurityIdentifier>();
         private static readonly string MapFileProviderTypeName = Config.Get("map-file-provider", "LocalDiskMapFileProvider");
         private static readonly char[] InvalidCharacters = {'|', ' '};
         private static IMapFileProvider _mapFileProvider;
@@ -99,6 +102,7 @@ namespace QuantConnect
         private readonly ulong _properties;
         private readonly SidBox _underlying;
         private readonly int _hashCode;
+        private decimal _strikePrice;
 
         #endregion
 
@@ -199,10 +203,16 @@ namespace QuantConnect
                 {
                     throw new InvalidOperationException("OptionType is only defined for SecurityType.Option");
                 }
-                var scale = ExtractFromProperties(StrikeScaleOffset, StrikeScaleWidth);
-                var unscaled = ExtractFromProperties(StrikeOffset, StrikeWidth);
-                var pow = Math.Pow(10, (int)scale - StrikeDefaultScale);
-                return unscaled * (decimal)pow;
+
+                // performance: lets calculate strike price once
+                if (_strikePrice == -1)
+                {
+                    var scale = ExtractFromProperties(StrikeScaleOffset, StrikeScaleWidth);
+                    var unscaled = ExtractFromProperties(StrikeOffset, StrikeWidth);
+                    var pow = Math.Pow(10, (int)scale - StrikeDefaultScale);
+                    _strikePrice = unscaled * (decimal)pow;
+                }
+                return _strikePrice;
             }
         }
 
@@ -263,6 +273,7 @@ namespace QuantConnect
             _symbol = symbol;
             _properties = properties;
             _underlying = null;
+            _strikePrice = -1;
             SecurityType = (SecurityType)ExtractFromProperties(SecurityTypeOffset, SecurityTypeWidth, properties);
             _hashCode = unchecked (symbol.GetHashCode() * 397) ^ properties.GetHashCode();
         }
@@ -283,7 +294,8 @@ namespace QuantConnect
             }
             _symbol = symbol;
             _properties = properties;
-            if (underlying != Empty)
+            // performance: directly call Equals(SecurityIdentifier other), shortcuts Equals(object other)
+            if (!underlying.Equals(Empty))
             {
                 _underlying = new SidBox(underlying);
             }
@@ -460,7 +472,7 @@ namespace QuantConnect
 
             // normalize input strings
             market = market.ToLower();
-            symbol = symbol.ToUpper();
+            symbol = symbol.LazyToUpper();
 
             var marketIdentifier = QuantConnect.Market.Encode(market);
             if (!marketIdentifier.HasValue)
@@ -629,12 +641,20 @@ namespace QuantConnect
         private static bool TryParseProperties(string value, out Exception exception, out SecurityIdentifier identifier)
         {
             exception = null;
-            identifier = Empty;
 
             if (string.IsNullOrWhiteSpace(value))
             {
+                identifier = Empty;
                 return true;
             }
+
+            // for performance, we first verify if we already have parsed this SecurityIdentifier
+            if (SecurityIdentifierCache.TryGetValue(value, out identifier))
+            {
+                return true;
+            }
+            // after calling TryGetValue because if it failed it will set identifier to default
+            identifier = Empty;
 
             try
             {
@@ -664,6 +684,7 @@ namespace QuantConnect
                 return false;
             }
 
+            SecurityIdentifierCache.TryAdd(value, identifier);
             return true;
         }
 

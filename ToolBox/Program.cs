@@ -15,27 +15,35 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
+using System.IO;
 using QuantConnect.Configuration;
 using QuantConnect.ToolBox.AlgoSeekFuturesConverter;
 using QuantConnect.ToolBox.AlgoSeekOptionsConverter;
 using QuantConnect.ToolBox.BitfinexDownloader;
 using QuantConnect.ToolBox.CoarseUniverseGenerator;
+using QuantConnect.ToolBox.CoinApiDataConverter;
 using QuantConnect.ToolBox.CryptoiqDownloader;
 using QuantConnect.ToolBox.DukascopyDownloader;
+using QuantConnect.ToolBox.EstimizeDataDownloader;
 using QuantConnect.ToolBox.FxcmDownloader;
 using QuantConnect.ToolBox.FxcmVolumeDownload;
 using QuantConnect.ToolBox.GDAXDownloader;
 using QuantConnect.ToolBox.IBDownloader;
 using QuantConnect.ToolBox.IEX;
+using QuantConnect.ToolBox.IQFeedDownloader;
 using QuantConnect.ToolBox.IVolatilityEquityConverter;
 using QuantConnect.ToolBox.KaikoDataConverter;
 using QuantConnect.ToolBox.KrakenDownloader;
 using QuantConnect.ToolBox.NseMarketDataConverter;
 using QuantConnect.ToolBox.OandaDownloader;
+using QuantConnect.ToolBox.PsychSignalDataConverter;
 using QuantConnect.ToolBox.QuandlBitfinexDownloader;
 using QuantConnect.ToolBox.QuantQuoteConverter;
 using QuantConnect.ToolBox.RandomDataGenerator;
+using QuantConnect.ToolBox.SECDataDownloader;
+using QuantConnect.ToolBox.TradingEconomicsDataDownloader;
 using QuantConnect.ToolBox.YahooDownloader;
 using QuantConnect.Util;
 
@@ -90,7 +98,11 @@ namespace QuantConnect.ToolBox
                         break;
                     case "iexdl":
                     case "iexdownloader":
-                        IEXDownloaderProgram.IEXDownloader(tickers, resolution, fromDate, toDate);
+                        IEXDownloaderProgram.IEXDownloader(tickers, resolution, fromDate, toDate, GetParameterOrExit(optionsObject, "api-key"));
+                        break;
+                    case "iqfdl":
+                    case "iqfeeddownloader":
+                        IQFeedDownloaderProgram.IQFeedDownloader(tickers, resolution, fromDate, toDate);
                         break;
                     case "kdl":
                     case "krakendownloader":
@@ -112,9 +124,41 @@ namespace QuantConnect.ToolBox
                     case "bitfinexdownloader":
                         BitfinexDownloaderProgram.BitfinexDownloader(tickers, resolution, fromDate, toDate);
                         break;
+                    case "secdl":
+                    case "secdownloader":
+                        SECDataDownloaderProgram.SECDataDownloader(
+                            GetParameterOrExit(optionsObject, "destination-dir"),
+                            fromDate,
+                            toDate
+                        );
+                        break;
+                    case "ecdl":
+                    case "estimizeconsensusdownloader":
+                        EstimizeConsensusDataDownloaderProgram.EstimizeConsensusDataDownloader();
+                        break;
+                    case "eedl":
+                    case "estimizeestimatedownloader":
+                        EstimizeEstimateDataDownloaderProgram.EstimizeEstimateDataDownloader();
+                        break;
+                    case "erdl":
+                    case "estimizereleasedownloader":
+                        EstimizeReleaseDataDownloaderProgram.EstimizeReleaseDataDownloader();
+                        break;
+
+                    case "psdl":
+                    case "psychsignaldownloader":
+                        PsychSignalDataConverterProgram.PsychSignalDataDownloader(
+                            fromDate,
+                            toDate,
+                            GetParameterOrDefault(optionsObject, "destination-dir", Path.Combine(Globals.DataFolder, "alternative", "psychsignal", "raw-psychsignal")),
+                            GetParameterOrExit(optionsObject, "api-key"),
+                            GetParameterOrDefault(optionsObject, "data-source", "twitter_enhanced_withretweets,stocktwits"));
+                        break;
+
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");
                         break;
+
                 }
             }
             else
@@ -142,6 +186,11 @@ namespace QuantConnect.ToolBox
                                                                      GetParameterOrExit(optionsObject, "date"),
                                                                      GetParameterOrDefault(optionsObject, "exchange", string.Empty));
                         break;
+                    case "cadc":
+                    case "coinapidataconverter":
+                        CoinApiDataConverterProgram.CoinApiDataProgram(GetParameterOrExit(optionsObject, "date"), GetParameterOrExit(optionsObject, "market"),
+                            GetParameterOrExit(optionsObject, "source-dir"), GetParameterOrExit(optionsObject, "destination-dir"));
+                        break;
                     case "nmdc":
                     case "nsemarketdataconverter":
                         NseMarketDataConverterProgram.NseMarketDataConverter(GetParameterOrExit(optionsObject, "source-dir"),
@@ -160,16 +209,37 @@ namespace QuantConnect.ToolBox
                     case "rdg":
                     case "randomdatagenerator":
                         RandomDataGeneratorProgram.RandomDataGenerator(
-                            GetParameterOrExit(optionsObject, "from-date"),
-                            GetParameterOrExit(optionsObject, "to-date"),
+                            GetParameterOrExit(optionsObject, "start"),
+                            GetParameterOrExit(optionsObject, "end"),
                             GetParameterOrExit(optionsObject, "symbol-count"),
                             GetParameterOrDefault(optionsObject, "market", null),
                             GetParameterOrDefault(optionsObject, "security-type", "Equity"),
                             GetParameterOrDefault(optionsObject, "resolution", "Minute"),
                             GetParameterOrDefault(optionsObject, "data-density", "Dense"),
                             GetParameterOrDefault(optionsObject, "include-coarse", "true"),
-                            GetParameterOrDefault(optionsObject, "quote-trade-ratio", "1")
+                            GetParameterOrDefault(optionsObject, "quote-trade-ratio", "1"),
+                            GetParameterOrDefault(optionsObject, "random-seed", null),
+                            GetParameterOrDefault(optionsObject, "ipo-percentage", "5.0"),
+                            GetParameterOrDefault(optionsObject, "rename-percentage", "30.0"),
+                            GetParameterOrDefault(optionsObject, "splits-percentage", "15.0"),
+                            GetParameterOrDefault(optionsObject, "dividends-percentage", "60.0"),
+                            GetParameterOrDefault(optionsObject, "dividend-every-quarter-percentage", "30.0")
                         );
+                        break;
+                    case "seccv":
+                    case "secconverter":
+                        var start = DateTime.ParseExact(GetParameterOrExit(optionsObject, "date"), "yyyyMMdd", CultureInfo.InvariantCulture);
+                        SECDataDownloaderProgram.SECDataConverter(
+                            GetParameterOrExit(optionsObject, "source-dir"),
+                            GetParameterOrDefault(optionsObject, "destination-dir", Globals.DataFolder),
+                            start);
+                        break;
+                    case "psdc":
+                    case "psychsignaldataconverter":
+                        PsychSignalDataConverterProgram.PsychSignalDataConverter(
+                            GetParameterOrExit(optionsObject, "date"),
+                            GetParameterOrExit(optionsObject, "source-dir"),
+                            GetParameterOrExit(optionsObject, "destination-dir"));
                         break;
                     default:
                         PrintMessageAndExit(1, "ERROR: Unrecognized --app value");

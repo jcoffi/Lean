@@ -40,7 +40,6 @@
     <Content Include="AddRiskManagementAlgorithm.py" />
     <Content Include="AddUniverseSelectionModelAlgorithm.py" />
     <Content Include="Alphas\ContingentClaimsAnalysisDefaultPredictionAlpha.py" />
-    <Content Include="Alphas\ForexCalendarAlpha.py" />
     <Content Include="Alphas\GasAndCrudeOilEnergyCorrelationAlpha.py" />
     <Content Include="Alphas\GlobalEquityMeanReversionIBSAlpha.py" />
     <Content Include="Alphas\IntradayReversalCurrencyMarketsAlpha.py" />
@@ -53,10 +52,19 @@
     <Content Include="Alphas\ShareClassMeanReversionAlpha.py" />
     <Content Include="Alphas\TripleLeverageETFPairVolatilityDecayAlpha.py" />
     <Content Include="Alphas\VIXDualThrustAlpha.py" />
+    <Content Include="BasicCSharpIntegrationTemplateAlgorithm.py" />
     <Content Include="BasicSetAccountCurrencyAlgorithm.py" />
+    <Content Include="KerasNeuralNetworkAlgorithm.py" />
+    <None Include="PsychSignalSentimentRegressionAlgorithm.py" />
+    <Content Include="TradingEconomicsCalendarIndicatorAlgorithm.py" />
+    <Content Include="OnEndOfDayRegressionAlgorithm.py" />
+    <Content Include="SECReportDataAlgorithm.py" />
     <Content Include="USEnergyInformationAdministrationAlgorithm.py" />
+    <None Include="NLTKSentimentTradingAlgorithm.py" />
+    <None Include="PytorchNeuralNetworkAlgorithm.py" />
     <None Include="RawPricesUniverseRegressionAlgorithm.py" />
     <None Include="CapmAlphaRankingFrameworkAlgorithm.py" />
+    <None Include="ScikitLearnLinearRegressionAlgorithm.py" />
     <None Include="SmaCrossUniverseSelectionAlgorithm.py" />
     <Content Include="Benchmarks\StatefulCoarseUniverseSelectionBenchmark.py" />
     <Content Include="Benchmarks\StatelessCoarseUniverseSelectionBenchmark.py" />
@@ -65,9 +73,11 @@
     <Content Include="BasicTemplateFuturesFrameworkAlgorithm.py" />
     <Content Include="BasicTemplateOptionsFrameworkAlgorithm.py" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Content Include="InsightWeightingFrameworkAlgorithm.py" />
     <None Include="CompositeRiskManagementModelFrameworkAlgorithm.py" />
     <None Include="BlackLittermanPortfolioOptimizationFrameworkAlgorithm.py" />
     <None Include="packages.config" />
+    <None Include="TensorFlowNeuralNetworkAlgorithm.py" />
     <None Include="TiingoDailyDataAlgorithm.py" />
     <None Include="PearsonCorrelationPairsTradingAlphaModelFrameworkAlgorithm.py" />
   </ItemGroup>
@@ -113,7 +123,6 @@
     <None Include="CustomSecurityInitializerAlgorithm.py" />
     <None Include="CustomVolatilityModelAlgorithm.py" />
     <None Include="DailyAlgorithm.py" />
-    <None Include="DailyFxAlgorithm.py" />
     <None Include="DataConsolidationAlgorithm.py" />
     <None Include="DelistingEventsAlgorithm.py" />
     <None Include="DisplacedMovingAverageRibbon.py" />

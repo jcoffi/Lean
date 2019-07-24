@@ -406,6 +406,11 @@ namespace QuantConnect.Brokerages.Backtesting
                         // change in status or a new fill
                         if (order.Status != fill.Status || fill.FillQuantity != 0)
                         {
+                            // we update the order status so we do not re process it if we re enter
+                            // because of the call to OnOrderEvent.
+                            // Note: this is done by the transaction handler but we have a clone of the order
+                            order.Status = fill.Status;
+
                             //If the fill models come back suggesting filled, process the affects on portfolio
                             OnOrderEvent(fill);
                         }
@@ -427,8 +432,9 @@ namespace QuantConnect.Brokerages.Backtesting
                     }
                 }
 
-                // if we didn't fill then we need to continue to scan
-                _needsScan = stillNeedsScan;
+                // if we didn't fill then we need to continue to scan or
+                // if there are still pending orders
+                _needsScan = stillNeedsScan || !_pending.IsEmpty;
             }
         }
 

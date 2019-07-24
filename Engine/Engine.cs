@@ -100,7 +100,6 @@ namespace QuantConnect.Lean.Engine
 
                 //Reset thread holders.
                 var initializeComplete = false;
-                Thread threadTransactions = null;
                 Thread threadResults = null;
                 Thread threadRealTime = null;
                 Thread threadAlphas = null;
@@ -186,7 +185,7 @@ namespace QuantConnect.Lean.Engine
                         (historyProvider as BrokerageHistoryProvider).SetBrokerage(brokerage);
                     }
 
-                    var historyDataCacheProvider = new ZipDataCacheProvider(_algorithmHandlers.DataProvider);
+                    var historyDataCacheProvider = new ZipDataCacheProvider(_algorithmHandlers.DataProvider, isDataEphemeral:_liveMode);
                     historyProvider.Initialize(
                         new HistoryProviderInitializeParameters(
                             job,
@@ -309,12 +308,10 @@ namespace QuantConnect.Lean.Engine
                     _algorithmHandlers.Results.SendStatusUpdate(AlgorithmStatus.Running);
 
                     //Launch the data, transaction and realtime handlers into dedicated threads
-                    threadTransactions = new Thread(_algorithmHandlers.Transactions.Run) { IsBackground = true, Name = "Transaction Thread" };
                     threadRealTime = new Thread(_algorithmHandlers.RealTime.Run) { IsBackground = true, Name = "RealTime Thread" };
                     threadAlphas = new Thread(() => _algorithmHandlers.Alphas.Run()) {IsBackground = true, Name = "Alpha Thread" };
 
                     //Launch the data feed, result sending, and transaction models/handlers in separate threads.
-                    threadTransactions.Start(); // Transaction modeller scanning new order requests
                     threadRealTime.Start(); // RealTime scan time for time based events:
                     threadAlphas.Start(); // Alpha thread for processing algorithm alpha insights
 
@@ -459,20 +456,24 @@ namespace QuantConnect.Lean.Engine
                 _algorithmHandlers.Results.Exit();
 
                 //Wait for the threads to complete:
-                var ts = Stopwatch.StartNew();
+                var millisecondInterval = 10;
+                var millisecondTotalWait = 0;
                 while ((_algorithmHandlers.Results.IsActive
                     || (_algorithmHandlers.Transactions != null && _algorithmHandlers.Transactions.IsActive)
                     || (_algorithmHandlers.DataFeed != null && _algorithmHandlers.DataFeed.IsActive)
                     || (_algorithmHandlers.RealTime != null && _algorithmHandlers.RealTime.IsActive)
                     || (_algorithmHandlers.Alphas != null && _algorithmHandlers.Alphas.IsActive))
-                    && ts.ElapsedMilliseconds < 30*1000)
+                    && millisecondTotalWait < 30*1000)
                 {
-                    Thread.Sleep(100);
-                    Log.Trace("Waiting for threads to exit...");
+                    Thread.Sleep(millisecondInterval);
+                    if (millisecondTotalWait % (millisecondInterval * 10) == 0)
+                    {
+                        Log.Trace("Waiting for threads to exit...");
+                    }
+                    millisecondTotalWait += millisecondInterval;
                 }
 
                 //Terminate threads still in active state.
-                if (threadTransactions != null && threadTransactions.IsAlive) threadTransactions.Abort();
                 if (threadResults != null && threadResults.IsAlive) threadResults.Abort();
                 if (threadAlphas != null && threadAlphas.IsAlive) threadAlphas.Abort();
 
