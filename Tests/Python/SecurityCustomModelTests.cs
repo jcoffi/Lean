@@ -24,7 +24,7 @@ using QuantConnect.Securities;
 using QuantConnect.Securities.Equity;
 using QuantConnect.Tests.Common.Securities;
 using System;
-using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.Tests.Engine.DataFeeds;
 
 namespace QuantConnect.Tests.Python
 {
@@ -37,7 +37,7 @@ namespace QuantConnect.Tests.Python
         public void SetBuyingPowerModelSuccess(bool isChild)
         {
             var algorithm = new QCAlgorithm();
-            algorithm.SubscriptionManager.SetDataManager(new DataManager());
+            algorithm.SubscriptionManager.SetDataManager(new DataManagerStub(algorithm));
             algorithm.SetDateTime(new DateTime(2018, 8, 20, 15, 0, 0));
             algorithm.Transactions.SetOrderProcessor(new FakeOrderProcessor());
 
@@ -95,19 +95,19 @@ class CustomBuyingPowerModel:
     def __init__(self):
         self.margin = 1.0
 
-    def GetBuyingPower(self, portfolio, security, direction):
-        return portfolio.MarginRemaining
-    
+    def GetBuyingPower(self, context):
+        return BuyingPower(context.Portfolio.MarginRemaining)
+
     def GetLeverage(self, security):
         return 1.0 / self.margin
 
-    def GetMaximumOrderQuantityForTargetValue(self, portfolio, security, order):
+    def GetMaximumOrderQuantityForTargetValue(self, context):
         return GetMaximumOrderQuantityForTargetValueResult(200)
 
-    def GetReservedBuyingPowerForPosition(self, security):
-        return security.Holdings.AbsoluteHoldingsCost * self.margin
+    def GetReservedBuyingPowerForPosition(self, context):
+        return ReservedBuyingPowerForPosition(context.Security.Holdings.AbsoluteHoldingsCost * self.margin)
 
-    def HasSufficientBuyingPowerForOrder(self, portfolio, security, order):
+    def HasSufficientBuyingPowerForOrder(self, context):
         return HasSufficientBuyingPowerForOrderResult(True)
 
     def SetLeverage(self, security, leverage):
@@ -123,7 +123,7 @@ from QuantConnect import *
 from QuantConnect.Securities import *
 
 class CustomBuyingPowerModel(SecurityMarginModel):
-    def GetMaximumOrderQuantityForTargetValue(self, portfolio, security, order):
+    def GetMaximumOrderQuantityForTargetValue(self, context):
         return GetMaximumOrderQuantityForTargetValueResult(100)";
 
         private Security GetSecurity<T>(Symbol symbol, Resolution resolution)
@@ -141,8 +141,10 @@ class CustomBuyingPowerModel(SecurityMarginModel):
             return new Security(
                 SecurityExchangeHours.AlwaysOpen(TimeZones.Utc),
                 subscriptionDataConfig,
-                new Cash(CashBook.AccountCurrency, 0, 1m),
-                SymbolProperties.GetDefault(CashBook.AccountCurrency));
+                new Cash(Currencies.USD, 0, 1m),
+                SymbolProperties.GetDefault(Currencies.USD),
+                ErrorCurrencyConverter.Instance
+            );
         }
     }
 }

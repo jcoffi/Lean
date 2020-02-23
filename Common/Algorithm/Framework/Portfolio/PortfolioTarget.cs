@@ -13,7 +13,9 @@
  * limitations under the License.
 */
 
+using System;
 using QuantConnect.Interfaces;
+using QuantConnect.Securities;
 
 namespace QuantConnect.Algorithm.Framework.Portfolio
 {
@@ -53,7 +55,7 @@ namespace QuantConnect.Algorithm.Framework.Portfolio
         /// <returns>A portfolio target for the specified symbol/percent</returns>
         public static IPortfolioTarget Percent(IAlgorithm algorithm, Symbol symbol, double percent)
         {
-            return Percent(algorithm, symbol, (decimal) percent);
+            return Percent(algorithm, symbol, percent.SafeDecimalCast());
         }
 
         /// <summary>
@@ -67,6 +69,16 @@ namespace QuantConnect.Algorithm.Framework.Portfolio
         /// <returns>A portfolio target for the specified symbol/percent</returns>
         public static IPortfolioTarget Percent(IAlgorithm algorithm, Symbol symbol, decimal percent, bool returnDeltaQuantity = false)
         {
+            var absolutePercentage = Math.Abs(percent);
+            if (absolutePercentage > algorithm.Settings.MaxAbsolutePortfolioTargetPercentage
+                || absolutePercentage != 0 && absolutePercentage < algorithm.Settings.MinAbsolutePortfolioTargetPercentage)
+            {
+                algorithm.Error($"The portfolio target percent: {percent}, does not comply with the current " +
+                    $"'Algorithm.Settings' 'MaxAbsolutePortfolioTargetPercentage': {algorithm.Settings.MaxAbsolutePortfolioTargetPercentage}" +
+                    $" or 'MinAbsolutePortfolioTargetPercentage': {algorithm.Settings.MinAbsolutePortfolioTargetPercentage}. Skipping");
+                return null;
+            }
+
             var security = algorithm.Securities[symbol];
             if (security.Price == 0)
             {
@@ -77,10 +89,13 @@ namespace QuantConnect.Algorithm.Framework.Portfolio
             // Factoring in FreePortfolioValuePercentage.
             var adjustedPercent = percent * (1 - algorithm.Settings.FreePortfolioValuePercentage);
 
-            var result = security.BuyingPowerModel.GetMaximumOrderQuantityForTargetValue(algorithm.Portfolio, security, adjustedPercent);
+            var result = security.BuyingPowerModel.GetMaximumOrderQuantityForTargetValue(
+                new GetMaximumOrderQuantityForTargetValueParameters(algorithm.Portfolio, security, adjustedPercent)
+            );
+
             if (result.IsError)
             {
-                algorithm.Error($"Unable to compute order quantity of {symbol}. Reason: {result.Reason}. Returning null.");
+                algorithm.Error($"Unable to compute order quantity of {symbol}. Reason: {result.Reason} Returning null.");
                 return null;
             }
 

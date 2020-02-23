@@ -419,67 +419,69 @@ namespace QuantConnect.Tests.Engine.DataFeeds
         [Test, TestCaseSource(nameof(SpotMarketCases))]
         public void HandlesLeanDataReaderOutputForSpotMarkets(string securityType, string market, string resolution, string ticker, string fileName, int rowsInfile, double sumValue)
         {
-            // Arrange
-            var dataFolder = "../../../Data";
-            var filepath = LeanDataReaderTests.GenerateFilepathForTesting(dataFolder, securityType, market, resolution, ticker, fileName);
-            var leanDataReader = new LeanDataReader(filepath);
-            var data = leanDataReader.Parse();
-            var converter = new PandasConverter();
-            // Act
-            dynamic df = converter.GetDataFrame(data);
-            // Assert
-            Assert.AreEqual(rowsInfile, df.shape[0].AsManagedObject(typeof(int)));
+            using (Py.GIL())
+            {
+                // Arrange
+                var dataFolder = "../../../Data";
+                var filepath = LeanDataReaderTests.GenerateFilepathForTesting(dataFolder, securityType, market, resolution, ticker, fileName);
+                var leanDataReader = new LeanDataReader(filepath);
+                var data = leanDataReader.Parse();
+                var converter = new PandasConverter();
+                // Act
+                dynamic df = converter.GetDataFrame(data);
+                // Assert
+                Assert.AreEqual(rowsInfile, df.shape[0].AsManagedObject(typeof(int)));
 
-            int columnsNumber = df.shape[1].AsManagedObject(typeof(int));
-            if (columnsNumber == 3 || columnsNumber == 6)
-            {
-                Assert.AreEqual(sumValue, df.get("lastprice").sum().AsManagedObject(typeof(double)), 1e-4);
-            }
-            else
-            {
-                Assert.AreEqual(sumValue, df.get("close").sum().AsManagedObject(typeof(double)), 1e-4);
+                int columnsNumber = df.shape[1].AsManagedObject(typeof(int));
+                if (columnsNumber == 3 || columnsNumber == 6)
+                {
+                    Assert.AreEqual(sumValue, df.get("lastprice").sum().AsManagedObject(typeof(double)), 1e-4);
+                }
+                else
+                {
+                    Assert.AreEqual(sumValue, df.get("close").sum().AsManagedObject(typeof(double)), 1e-4);
+                }
             }
         }
 
         [Test, TestCaseSource(nameof(OptionAndFuturesCases))]
         public void HandlesLeanDataReaderOutputForOptionAndFutures(string composedFilePath, Symbol symbol, int rowsInfile, double sumValue)
         {
-            // Arrange
-            var leanDataReader = new LeanDataReader(composedFilePath);
-            var data = leanDataReader.Parse();
-            var converter = new PandasConverter();
-            // Act
-            dynamic df = converter.GetDataFrame(data);
-            // Assert
-            Assert.AreEqual(rowsInfile, df.shape[0].AsManagedObject(typeof(int)));
+            using (Py.GIL())
+            {
+                // Arrange
+                var leanDataReader = new LeanDataReader(composedFilePath);
+                var data = leanDataReader.Parse();
+                var converter = new PandasConverter();
+                // Act
+                dynamic df = converter.GetDataFrame(data);
+                // Assert
+                Assert.AreEqual(rowsInfile, df.shape[0].AsManagedObject(typeof(int)));
 
-            int columnsNumber = df.shape[1].AsManagedObject(typeof(int));
-            if (columnsNumber == 3 || columnsNumber == 6)
-            {
-                Assert.AreEqual(sumValue, df.get("lastprice").sum().AsManagedObject(typeof(double)), 1e-4);
-            }
-            else if (columnsNumber == 1)
-            {
-                Assert.AreEqual(sumValue, df.get("openinterest").sum().AsManagedObject(typeof(double)), 1e-4);
-            }
-            else
-            {
-                Assert.AreEqual(sumValue, df.get("close").sum().AsManagedObject(typeof(double)), 1e-4);
+                int columnsNumber = df.shape[1].AsManagedObject(typeof(int));
+                if (columnsNumber == 3 || columnsNumber == 6)
+                {
+                    Assert.AreEqual(sumValue, df.get("lastprice").sum().AsManagedObject(typeof(double)), 1e-4);
+                }
+                else if (columnsNumber == 1)
+                {
+                    Assert.AreEqual(sumValue, df.get("openinterest").sum().AsManagedObject(typeof(double)), 1e-4);
+                }
+                else
+                {
+                    Assert.AreEqual(sumValue, df.get("close").sum().AsManagedObject(typeof(double)), 1e-4);
+                }
             }
         }
-
-
 
         public IEnumerable<Slice> GetHistory<T>(Symbol symbol, Resolution resolution, IEnumerable<T> data)
             where T : IBaseData
         {
             var subscriptionDataConfig = GetSubscriptionDataConfig<T>(symbol, resolution);
             var security = GetSecurity(subscriptionDataConfig);
-
-            return data.Select(t => TimeSlice.Create(
+            var timeSliceFactory = new TimeSliceFactory(TimeZones.Utc);
+            return data.Select(t => timeSliceFactory.Create(
                t.Time,
-               TimeZones.Utc,
-               new CashBook(),
                new List<DataFeedPacket> { new DataFeedPacket(security, subscriptionDataConfig, new List<BaseData>() { t as BaseData }) },
                new SecurityChanges(Enumerable.Empty<Security>(), Enumerable.Empty<Security>()),
                 new Dictionary<Universe, BaseDataCollection>()).Slice);
@@ -503,8 +505,10 @@ namespace QuantConnect.Tests.Engine.DataFeeds
             return new Security(
                 SecurityExchangeHours.AlwaysOpen(TimeZones.Utc),
                 subscriptionDataConfig,
-                new Cash(CashBook.AccountCurrency, 0, 1m),
-                SymbolProperties.GetDefault(CashBook.AccountCurrency));
+                new Cash(Currencies.USD, 0, 1m),
+                SymbolProperties.GetDefault(Currencies.USD),
+                ErrorCurrencyConverter.Instance
+            );
         }
     }
 }

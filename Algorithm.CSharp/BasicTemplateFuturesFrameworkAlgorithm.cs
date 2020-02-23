@@ -15,15 +15,12 @@
 
 using System;
 using System.Collections.Generic;
-using QuantConnect.Algorithm.Framework;
 using QuantConnect.Algorithm.Framework.Alphas;
 using QuantConnect.Algorithm.Framework.Execution;
 using QuantConnect.Algorithm.Framework.Portfolio;
 using QuantConnect.Algorithm.Framework.Risk;
 using QuantConnect.Algorithm.Framework.Selection;
-using QuantConnect.Data.UniverseSelection;
 using QuantConnect.Interfaces;
-using QuantConnect.Orders;
 using QuantConnect.Securities;
 
 namespace QuantConnect.Algorithm.CSharp
@@ -32,7 +29,7 @@ namespace QuantConnect.Algorithm.CSharp
     /// Basic template futures framework algorithm uses framework components to define an algorithm
     /// that trades futures.
     /// </summary>
-    public class BasicTemplateFuturesFrameworkAlgorithm : QCAlgorithmFramework, IRegressionAlgorithmDefinition
+    public class BasicTemplateFuturesFrameworkAlgorithm : QCAlgorithm, IRegressionAlgorithmDefinition
     {
         public override void Initialize()
         {
@@ -114,7 +111,7 @@ namespace QuantConnect.Algorithm.CSharp
         /// </summary>
         class SingleSharePortfolioConstructionModel : PortfolioConstructionModel
         {
-            public override IEnumerable<IPortfolioTarget> CreateTargets(QCAlgorithmFramework algorithm, Insight[] insights)
+            public override IEnumerable<IPortfolioTarget> CreateTargets(QCAlgorithm algorithm, Insight[] insights)
             {
                 foreach (var insight in insights)
                 {
@@ -141,21 +138,21 @@ namespace QuantConnect.Algorithm.CSharp
             {"Total Trades", "2"},
             {"Average Win", "0%"},
             {"Average Loss", "0%"},
-            {"Compounding Annual Return", "-92.560%"},
+            {"Compounding Annual Return", "-92.656%"},
             {"Drawdown", "5.000%"},
             {"Expectancy", "0"},
-            {"Net Profit", "-3.296%"},
-            {"Sharpe Ratio", "-17.052"},
+            {"Net Profit", "-3.312%"},
+            {"Sharpe Ratio", "-16.986"},
             {"Loss Rate", "0%"},
             {"Win Rate", "0%"},
             {"Profit-Loss Ratio", "0"},
-            {"Alpha", "-0.813"},
-            {"Beta", "-78.544"},
+            {"Alpha", "-0.828"},
+            {"Beta", "-77.873"},
             {"Annual Standard Deviation", "0.099"},
             {"Annual Variance", "0.01"},
-            {"Information Ratio", "-17.143"},
+            {"Information Ratio", "-17.076"},
             {"Tracking Error", "0.099"},
-            {"Treynor Ratio", "0.021"},
+            {"Treynor Ratio", "0.022"},
             {"Total Fees", "$3.70"},
             {"Total Insights Generated", "6"},
             {"Total Insights Closed", "5"},

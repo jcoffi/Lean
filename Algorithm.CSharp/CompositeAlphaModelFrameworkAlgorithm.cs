@@ -14,7 +14,6 @@
 */
 
 using System.Collections.Generic;
-using QuantConnect.Algorithm.Framework;
 using QuantConnect.Algorithm.Framework.Alphas;
 using QuantConnect.Algorithm.Framework.Execution;
 using QuantConnect.Algorithm.Framework.Portfolio;
@@ -27,7 +26,7 @@ namespace QuantConnect.Algorithm.CSharp
     /// <summary>
     /// Show cases how to use the <see cref="CompositeAlphaModel"/> to define
     /// </summary>
-    public class CompositeAlphaModelFrameworkAlgorithm : QCAlgorithmFramework, IRegressionAlgorithmDefinition
+    public class CompositeAlphaModelFrameworkAlgorithm : QCAlgorithm, IRegressionAlgorithmDefinition
     {
         public override void Initialize()
         {
@@ -43,7 +42,7 @@ namespace QuantConnect.Algorithm.CSharp
             AddEquity("AIG");
 
             // define a manual universe of all the securities we manually registered
-            SetUniverseSelection(new ManualUniverseSelectionModel(Securities.Keys));
+            SetUniverseSelection(new ManualUniverseSelectionModel());
 
             // define alpha model as a composite of the rsi and ema cross models
             SetAlpha(new CompositeAlphaModel(

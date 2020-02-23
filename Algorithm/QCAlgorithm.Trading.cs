@@ -27,6 +27,7 @@ namespace QuantConnect.Algorithm
     public partial class QCAlgorithm
     {
         private int _maxOrders = 10000;
+        private bool _isMarketOnOpenOrderWarningSent = false;
 
         /// <summary>
         /// Transaction Manager - Process transaction fills and order management.
@@ -205,10 +206,14 @@ namespace QuantConnect.Algorithm
             if (!security.Exchange.ExchangeOpen)
             {
                 var mooTicket = MarketOnOpenOrder(security.Symbol, quantity, tag);
-                var anyNonDailySubscriptions = security.Subscriptions.Any(x => x.Resolution != Resolution.Daily);
-                if (mooTicket.SubmitRequest.Response.IsSuccess && !anyNonDailySubscriptions)
+                if (!_isMarketOnOpenOrderWarningSent)
                 {
-                    Debug("Converted OrderID: " + mooTicket.OrderId + " into a MarketOnOpen order.");
+                    var anyNonDailySubscriptions = security.Subscriptions.Any(x => x.Resolution != Resolution.Daily);
+                    if (mooTicket.SubmitRequest.Response.IsSuccess && !anyNonDailySubscriptions)
+                    {
+                        Debug("Warning: all market orders sent using daily data, or market orders sent after hours are automatically converted into MarketOnOpen orders.");
+                        _isMarketOnOpenOrderWarningSent = true;
+                    }
                 }
                 return mooTicket;
             }
@@ -768,7 +773,7 @@ namespace QuantConnect.Algorithm
         /// <param name="symbolToLiquidate">Symbols we wish to liquidate</param>
         /// <param name="tag">Custom tag to know who is calling this.</param>
         /// <returns>Array of order ids for liquidated symbols</returns>
-        /// <seealso cref="MarketOrder"/>
+        /// <seealso cref="MarketOrder(QuantConnect.Symbol,decimal,bool,string)"/>
         public List<int> Liquidate(Symbol symbolToLiquidate = null, string tag = "Liquidated")
         {
             var orderIdList = new List<int>();
@@ -778,13 +783,20 @@ namespace QuantConnect.Algorithm
                 return orderIdList;
             }
 
-
-            foreach (var symbol in Securities.Keys.OrderBy(x => x.Value))
+            IEnumerable<Symbol> toLiquidate;
+            if (symbolToLiquidate != null)
             {
-                // symbol not matching, do nothing
-                if (symbol != symbolToLiquidate && symbolToLiquidate != null)
-                    continue;
+                toLiquidate = Securities.ContainsKey(symbolToLiquidate)
+                    ? new[] { symbolToLiquidate } : Enumerable.Empty<Symbol>();
+            }
+            else
+            {
+                toLiquidate = Securities.Keys.OrderBy(x => x.Value);
+            }
 
+
+            foreach (var symbol in toLiquidate)
+            {
                 // get open orders
                 var orders = Transactions.GetOpenOrders(symbol);
 
@@ -848,7 +860,7 @@ namespace QuantConnect.Algorithm
         /// <param name="symbol">string symbol we wish to hold</param>
         /// <param name="percentage">double percentage of holdings desired</param>
         /// <param name="liquidateExistingHoldings">liquidate existing holdings if neccessary to hold this stock</param>
-        /// <seealso cref="MarketOrder"/>
+        /// <seealso cref="MarketOrder(QuantConnect.Symbol,decimal,bool,string)"/>
         public void SetHoldings(Symbol symbol, double percentage, bool liquidateExistingHoldings = false)
         {
             SetHoldings(symbol, (decimal)percentage, liquidateExistingHoldings);
@@ -861,7 +873,7 @@ namespace QuantConnect.Algorithm
         /// <param name="percentage">float percentage of holdings desired</param>
         /// <param name="liquidateExistingHoldings">bool liquidate existing holdings if neccessary to hold this stock</param>
         /// <param name="tag">Tag the order with a short string.</param>
-        /// <seealso cref="MarketOrder"/>
+        /// <seealso cref="MarketOrder(QuantConnect.Symbol,decimal,bool,string)"/>
         public void SetHoldings(Symbol symbol, float percentage, bool liquidateExistingHoldings = false, string tag = "")
         {
             SetHoldings(symbol, (decimal)percentage, liquidateExistingHoldings, tag);
@@ -874,7 +886,7 @@ namespace QuantConnect.Algorithm
         /// <param name="percentage">float percentage of holdings desired</param>
         /// <param name="liquidateExistingHoldings">bool liquidate existing holdings if neccessary to hold this stock</param>
         /// <param name="tag">Tag the order with a short string.</param>
-        /// <seealso cref="MarketOrder"/>
+        /// <seealso cref="MarketOrder(QuantConnect.Symbol,decimal,bool,string)"/>
         public void SetHoldings(Symbol symbol, int percentage, bool liquidateExistingHoldings = false, string tag = "")
         {
             SetHoldings(symbol, (decimal)percentage, liquidateExistingHoldings, tag);
@@ -890,7 +902,7 @@ namespace QuantConnect.Algorithm
         /// <param name="percentage">decimal fraction of portfolio to set stock</param>
         /// <param name="liquidateExistingHoldings">bool flag to clean all existing holdings before setting new faction.</param>
         /// <param name="tag">Tag the order with a short string.</param>
-        /// <seealso cref="MarketOrder"/>
+        /// <seealso cref="MarketOrder(QuantConnect.Symbol,decimal,bool,string)"/>
         public void SetHoldings(Symbol symbol, decimal percentage, bool liquidateExistingHoldings = false, string tag = "")
         {
             //Initialize Requirements:

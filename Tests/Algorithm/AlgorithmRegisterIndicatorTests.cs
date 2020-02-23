@@ -22,7 +22,7 @@ using QuantConnect.Tests.Indicators;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using QuantConnect.Lean.Engine.DataFeeds;
+using QuantConnect.Tests.Engine.DataFeeds;
 
 namespace QuantConnect.Tests.Algorithm
 {
@@ -37,7 +37,7 @@ namespace QuantConnect.Tests.Algorithm
         public void Setup()
         {
             _algorithm = new QCAlgorithm();
-            _algorithm.SubscriptionManager.SetDataManager(new DataManager());
+            _algorithm.SubscriptionManager.SetDataManager(new DataManagerStub(_algorithm));
             _spy = _algorithm.AddEquity("SPY").Symbol;
 
             _indicatorTestsTypes =
@@ -86,7 +86,7 @@ namespace QuantConnect.Tests.Algorithm
         }
 
         [Test]
-        public void RegistersIndicatorProperlyPython()
+        public void PlotAndRegistersIndicatorProperlyPython()
         {
             var expected = 0;
             PyObject indicator;
@@ -111,6 +111,7 @@ namespace QuantConnect.Tests.Algorithm
                     throw new NotSupportedException($"RegistersIndicatorProperlyPython(): Unsupported indicator data type: {indicatorTest.GetType()}");
                 }
                 Assert.DoesNotThrow(() => _algorithm.RegisterIndicator(_spy, indicator, Resolution.Minute));
+                Assert.DoesNotThrow(() => _algorithm.Plot(_spy.Value, indicator));
                 expected++;
 
                 var actual = _algorithm.SubscriptionManager.Subscriptions.FirstOrDefault().Consolidators.Count;
@@ -126,12 +127,15 @@ namespace QuantConnect.Tests.Algorithm
                 var module = PythonEngine.ModuleFromString(Guid.NewGuid().ToString(),
                     "class GoodCustomIndicator:\n" +
                     "    def __init__(self):\n" +
+                    "        self.IsReady = True\n" +
+                    "        self.Value = 0\n" +
                     "        pass\n" +
                     "    def Update(self, input):\n" +
                     "        return input\n" +
                     "class BadCustomIndicator:\n" +
                     "    def __init__(self):\n" +
-                    "        pass\n" +
+                    "        self.IsReady = True\n" +
+                    "        self.Value = 0\n" +
                     "    def Updat(self, input):\n" +
                     "        return input");
 
@@ -142,7 +146,7 @@ namespace QuantConnect.Tests.Algorithm
                 Assert.AreEqual(1, actual);
 
                 var badIndicator = module.GetAttr("BadCustomIndicator").Invoke();
-                Assert.Throws<ArgumentException>(() => _algorithm.RegisterIndicator(_spy, badIndicator, Resolution.Minute));
+                Assert.Throws<NotImplementedException>(() => _algorithm.RegisterIndicator(_spy, badIndicator, Resolution.Minute));
             }
         }
 
@@ -158,12 +162,21 @@ AddReference('QuantConnect.Lean.Engine')
 
 from System import *
 from QuantConnect import *
+from QuantConnect.Securities import *
 from QuantConnect.Algorithm import *
 from QuantConnect.Indicators import *
 from QuantConnect.Lean.Engine.DataFeeds import *
 
 algo = QCAlgorithm()
-algo.SubscriptionManager.SetDataManager(DataManager())
+
+marketHoursDatabase = MarketHoursDatabase.FromDataFolder()
+symbolPropertiesDatabase = SymbolPropertiesDatabase.FromDataFolder()
+securityService =  SecurityService(algo.Portfolio.CashBook, marketHoursDatabase, symbolPropertiesDatabase, algo)
+algo.Securities.SetSecurityService(securityService)
+dataManager = DataManager(None, UniverseSelection(algo, securityService), algo, algo.TimeKeeper, marketHoursDatabase, False)
+algo.SubscriptionManager.SetDataManager(dataManager)
+
+
 forex = algo.AddForex('EURUSD', Resolution.Daily)
 indicator = IchimokuKinkoHyo('EURUSD', 9, 26, 26, 52, 26, 26)
 algo.RegisterIndicator(forex.Symbol, indicator, Resolution.Daily)";

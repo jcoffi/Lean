@@ -1,11 +1,11 @@
 ﻿/*
  * QUANTCONNECT.COM - Democratizing Finance, Empowering Individuals.
  * Lean Algorithmic Trading Engine v2.0. Copyright 2014 QuantConnect Corporation.
- * 
- * Licensed under the Apache License, Version 2.0 (the "License"); 
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,12 +14,8 @@
 */
 
 using System;
-using System.Diagnostics;
-using System.Linq;
 using NodaTime;
 using NUnit.Framework;
-using QuantConnect.Brokerages;
-using QuantConnect.Brokerages.Fxcm;
 using QuantConnect.Data;
 using QuantConnect.Data.Market;
 using QuantConnect.Lean.Engine.HistoricalData;
@@ -32,44 +28,29 @@ namespace QuantConnect.Tests.Brokerages.Bitfinex
     [TestFixture]
     public partial class BitfinexBrokerageTests
     {
-        public TestCaseData[] ValidHistory
+        public TestCaseData[] History => new[]
         {
-            get
-            {
-                return new[]
-                {
-                    // valid 
-                    new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Minute, Time.OneHour, false),
-                    new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Hour, Time.OneDay, false),
-                    new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Daily, TimeSpan.FromDays(15), false),
-                };
-            }
-        }
-        public TestCaseData[] InvalidHistory
-        {
-            get
-            {
-                return new[]
-                {
-                    // invalid resolution
-                    new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Tick, TimeSpan.FromSeconds(15), true),
-                    new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Second, Time.OneMinute, true),
+            // valid
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Minute, Time.OneHour, false),
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Hour, Time.OneDay, false),
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Daily, TimeSpan.FromDays(15), false),
 
-                    // invalid period, no error, empty result
-                    new TestCaseData(Symbols.EURUSD, Resolution.Daily, TimeSpan.FromDays(-15), true),
+            // invalid resolution, no error, empty result
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Tick, TimeSpan.FromSeconds(15), false),
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Second, Time.OneMinute, false),
 
-                    // invalid symbol, throws "System.ArgumentException : Unknown symbol: XYZ"
-                    new TestCaseData(Symbol.Create("XYZ", SecurityType.Crypto, Market.Bitfinex), Resolution.Daily, TimeSpan.FromDays(15), true),
+            // invalid period, no error, empty result
+            new TestCaseData(Symbol.Create("ETHUSD", SecurityType.Crypto, Market.Bitfinex), Resolution.Daily, TimeSpan.FromDays(-15), false),
 
-                    // invalid security type, throws "System.ArgumentException : Invalid security type: Equity"
-                    new TestCaseData(Symbols.AAPL, Resolution.Daily, TimeSpan.FromDays(15), true),
-                };
-            }
-        }
+            // invalid symbol, throws "System.ArgumentException : Unknown symbol: XYZ"
+            new TestCaseData(Symbol.Create("XYZ", SecurityType.Crypto, Market.Bitfinex), Resolution.Daily, TimeSpan.FromDays(15), true),
+
+            // invalid security type, no error, empty result
+            new TestCaseData(Symbols.EURUSD, Resolution.Daily, TimeSpan.FromDays(15), false)
+        };
 
         [Test]
-        [TestCaseSource("ValidHistory")]
-        [TestCaseSource("InvalidHistory")]
+        [TestCaseSource(nameof(History))]
         public void GetsHistory(Symbol symbol, Resolution resolution, TimeSpan period, bool throwsException)
         {
             TestDelegate test = () =>
@@ -78,7 +59,7 @@ namespace QuantConnect.Tests.Brokerages.Bitfinex
 
                 var historyProvider = new BrokerageHistoryProvider();
                 historyProvider.SetBrokerage(brokerage);
-                historyProvider.Initialize(null, null, null, null, null, null);
+                historyProvider.Initialize(new HistoryProviderInitializeParameters(null, null, null, null, null, null, null));
 
                 var now = DateTime.UtcNow;
 

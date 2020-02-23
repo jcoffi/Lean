@@ -19,7 +19,6 @@ using System.Collections.Generic;
 using System.Linq;
 using QuantConnect.Data;
 using QuantConnect.Interfaces;
-using QuantConnect.Orders;
 using QuantConnect.Securities;
 
 namespace QuantConnect.Algorithm.CSharp
@@ -93,16 +92,6 @@ namespace QuantConnect.Algorithm.CSharp
         }
 
         /// <summary>
-        /// Order fill event handler. On an order fill update the resulting information is passed to this method.
-        /// </summary>
-        /// <param name="orderEvent">Order event details containing details of the evemts</param>
-        /// <remarks>This method can be called asynchronously and so should only be used by seasoned C# experts. Ensure you use proper locks on thread-unsafe objects</remarks>
-        public override void OnOrderEvent(OrderEvent orderEvent)
-        {
-            Log(orderEvent.ToString());
-        }
-
-        /// <summary>
         /// This is used by the regression test system to indicate if the open source Lean repository has the required data to run this algorithm.
         /// </summary>
         public bool CanRunLocally { get; } = true;
@@ -124,18 +113,19 @@ namespace QuantConnect.Algorithm.CSharp
             {"Drawdown", "13.500%"},
             {"Expectancy", "-0.818"},
             {"Net Profit", "-13.517%"},
-            {"Sharpe Ratio", "-29.366"},
+            {"Sharpe Ratio", "-29.354"},
             {"Loss Rate", "89%"},
             {"Win Rate", "11%"},
             {"Profit-Loss Ratio", "0.69"},
-            {"Alpha", "-7.745"},
-            {"Beta", "-0.86"},
+            {"Alpha", "-7.746"},
+            {"Beta", "-0.859"},
             {"Annual Standard Deviation", "0.305"},
             {"Annual Variance", "0.093"},
-            {"Information Ratio", "-24.986"},
+            {"Information Ratio", "-24.985"},
             {"Tracking Error", "0.414"},
-            {"Treynor Ratio", "10.401"},
-            {"Total Fees", "$15207.00"}
+            {"Treynor Ratio", "10.413"},
+            {"Total Fees", "$15207.00"},
+            {"Fitness Score", "0.033"}
         };
     }
 }
